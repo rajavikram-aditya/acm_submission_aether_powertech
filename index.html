@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AETHER — Market Operations Terminal</title>
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <!-- External Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+
+<!-- ── ANOMALY INDICATOR BAR ── -->
+<div id="anomaly-bar"></div>
+
+<!-- ── TOP BAR ── -->
+<div id="topbar">
+  <div id="logo">AETHER <span>// PowerTech</span> <span>// ACM</span></div>
+  <div id="topbar-ticker">
+    <div class="ticker-scroll" id="ts1"></div>
+    <div class="ticker-scroll" id="ts2"></div>
+  </div>
+  <div id="topbar-right">
+    <span id="mkt-status" class="closed">CLOSED</span>
+    <span id="clock">--:--:--</span>
+    <div id="heartbeat-dot"></div>
+    <span id="panels-menu-btn" onclick="togglePanelsMenu()">⊞ PANELS</span>
+    <span id="cmd-hint" onclick="openCmd()">⌘ K</span>
+  </div>
+</div>
+
+<!-- ── PANEL VISIBILITY MENU ── -->
+<div id="panels-menu">
+  <div id="panels-menu-header">
+    <span>PANEL VISIBILITY</span>
+    <button onclick="showAllPanels()">SHOW ALL</button>
+  </div>
+</div>
+
+<!-- ── WORKSPACE ── -->
+<div id="workspace">
+
+  <!-- NIFTY 50 Chart -->
+  <div class="panel" id="panel-chart" style="left:8px;top:8px;width:430px;height:240px;">
+    <div class="panel-header" data-panel="panel-chart">
+      <span class="panel-title">NIFTY 50 — 1D</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="panel-badge badge-live" id="chart-badge">LIVE</span>
+        <div class="panel-controls">
+          <button class="panel-btn panel-btn-min" onclick="minimisePanel('panel-chart',event)" title="Minimise">−</button>
+          <button class="panel-btn panel-btn-close" onclick="closePanel('panel-chart',event)" title="Close">×</button>
+        </div>
+      </div>
+    </div>
+    <div class="panel-body"><canvas id="chart-main" style="position:absolute;inset:0;"></canvas></div>
+    <div class="resize-handle"></div>
+  </div>
+
+  <!-- Signal Stream -->
+  <div class="panel" id="panel-stream" style="left:446px;top:8px;width:340px;height:370px;">
+    <div class="panel-header" data-panel="panel-stream">
+      <span class="panel-title">SIGNAL STREAM</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="panel-badge badge-live">LIVE</span>
+        <div class="panel-controls">
+          <button class="panel-btn panel-btn-min" onclick="minimisePanel('panel-stream',event)" title="Minimise">−</button>
+          <button class="panel-btn panel-btn-close" onclick="closePanel('panel-stream',event)" title="Close">×</button>
+        </div>
+      </div>
+    </div>
+    <div class="panel-body" id="stream-body"></div>
+    <div class="resize-handle"></div>
+  </div>
+
+  <!-- SEBI Gravity -->
+  <div class="panel" id="panel-sebi" style="left:764px;top:8px;width:310px;height:470px;">
+    <div class="panel-header" data-panel="panel-sebi">
+      <span class="panel-title">SEBI GRAVITY</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="panel-badge badge-sebi">REGULATORY</span>
+        <div class="panel-controls">
+          <button class="panel-btn panel-btn-min" onclick="minimisePanel('panel-sebi',event)" title="Minimise">−</button>
+          <button class="panel-btn panel-btn-close" onclick="closePanel('panel-sebi',event)" title="Close">×</button>
+        </div>
+      </div>
+    </div>
+    <div class="panel-body" id="sebi-body" style="overflow-y:auto;"></div>
+    <div class="resize-handle"></div>
+  </div>
+
+  <!-- Order Book -->
+  <div class="panel" id="panel-ob" style="left:8px;top:256px;width:210px;height:260px;">
+    <div class="panel-header" data-panel="panel-ob">
+      <span class="panel-title">ORDER BOOK</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="panel-badge badge-live">NIFTY</span>
+        <div class="panel-controls">
+          <button class="panel-btn panel-btn-min" onclick="minimisePanel('panel-ob',event)" title="Minimise">−</button>
+          <button class="panel-btn panel-btn-close" onclick="closePanel('panel-ob',event)" title="Close">×</button>
+        </div>
+      </div>
+    </div>
+    <div class="panel-body"><div class="ob-wrap" id="ob-wrap"></div></div>
+    <div class="resize-handle"></div>
+  </div>
+
+  <!-- Indices Sparklines -->
+  <div class="panel" id="panel-spark" style="left:226px;top:256px;width:212px;height:135px;">
+    <div class="panel-header" data-panel="panel-spark">
+      <span class="panel-title">INDICES</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="panel-badge badge-live">NSE/BSE</span>
+        <div class="panel-controls">
+          <button class="panel-btn panel-btn-min" onclick="minimisePanel('panel-spark',event)" title="Minimise">−</button>
+          <button class="panel-btn panel-btn-close" onclick="closePanel('panel-spark',event)" title="Close">×</button>
+        </div>
+      </div>
+    </div>
+    <div class="panel-body"><div class="spark-wrap" id="spark-wrap"></div></div>
+    <div class="resize-handle"></div>
+  </div>
+
+  <!-- Volatility Meter -->
+  <div class="panel" id="panel-vol" style="left:226px;top:399px;width:212px;height:117px;">
+    <div class="panel-header" data-panel="panel-vol">
+      <span class="panel-title">VOLATILITY</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="panel-badge badge-ai">INDIA VIX</span>
+        <div class="panel-controls">
+          <button class="panel-btn panel-btn-min" onclick="minimisePanel('panel-vol',event)" title="Minimise">−</button>
+          <button class="panel-btn panel-btn-close" onclick="closePanel('panel-vol',event)" title="Close">×</button>
+        </div>
+      </div>
+    </div>
+    <div class="panel-body"><div class="vol-meter" id="vol-meter"></div></div>
+    <div class="resize-handle"></div>
+  </div>
+
+  <!-- Sector Heatmap -->
+  <div class="panel" id="panel-heat" style="left:446px;top:386px;width:310px;height:148px;">
+    <div class="panel-header" data-panel="panel-heat">
+      <span class="panel-title">SECTOR HEATMAP</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="panel-badge badge-live">NSE</span>
+        <div class="panel-controls">
+          <button class="panel-btn panel-btn-min" onclick="minimisePanel('panel-heat',event)" title="Minimise">−</button>
+          <button class="panel-btn panel-btn-close" onclick="closePanel('panel-heat',event)" title="Close">×</button>
+        </div>
+      </div>
+    </div>
+    <div class="panel-body"><div class="heatmap-grid" id="heatmap-grid"></div></div>
+    <div class="resize-handle"></div>
+  </div>
+
+  <!-- The Whisper — Anomaly Detector -->
+  <div class="panel" id="panel-whisper" style="left:8px;top:524px;width:430px;height:130px;">
+    <div class="panel-header" data-panel="panel-whisper">
+      <span class="panel-title">THE WHISPER</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="panel-badge badge-ai" id="whisper-badge">ANOMALY ENGINE</span>
+        <div class="panel-controls">
+          <button class="panel-btn panel-btn-min" onclick="minimisePanel('panel-whisper',event)" title="Minimise">−</button>
+          <button class="panel-btn panel-btn-close" onclick="closePanel('panel-whisper',event)" title="Close">×</button>
+        </div>
+      </div>
+    </div>
+    <div class="panel-body"><div class="whisper-feed" id="whisper-feed"></div></div>
+    <div class="resize-handle"></div>
+  </div>
+
+  <!-- AI Signals -->
+  <div class="panel" id="panel-ai" style="left:764px;top:486px;width:310px;height:168px;">
+    <div class="panel-header" data-panel="panel-ai">
+      <span class="panel-title">AI SIGNALS</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="panel-badge badge-ai">MODEL v3</span>
+        <div class="panel-controls">
+          <button class="panel-btn panel-btn-min" onclick="minimisePanel('panel-ai',event)" title="Minimise">−</button>
+          <button class="panel-btn panel-btn-close" onclick="closePanel('panel-ai',event)" title="Close">×</button>
+        </div>
+      </div>
+    </div>
+    <div class="panel-body"><div class="signal-wrap" id="signal-wrap"></div></div>
+    <div class="resize-handle"></div>
+  </div>
+
+  <!-- Correlation Matrix -->
+  <div class="panel" id="panel-corr" style="left:446px;top:542px;width:310px;height:112px;">
+    <div class="panel-header" data-panel="panel-corr">
+      <span class="panel-title">CORRELATION</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="panel-badge badge-ai">PEARSON</span>
+        <div class="panel-controls">
+          <button class="panel-btn panel-btn-min" onclick="minimisePanel('panel-corr',event)" title="Minimise">−</button>
+          <button class="panel-btn panel-btn-close" onclick="closePanel('panel-corr',event)" title="Close">×</button>
+        </div>
+      </div>
+    </div>
+    <div class="panel-body"><div class="corr-grid" id="corr-grid"></div></div>
+    <div class="resize-handle"></div>
+  </div>
+
+</div><!-- end #workspace -->
+
+<!-- ── TETHER CANVAS (SEBI linking lines) ── -->
+<canvas id="tether-canvas"></canvas>
+
+<!-- ── SEBI SLIDE-OVER ── -->
+<div id="slideover">
+  <div id="slideover-header">
+    <div>
+      <div style="font-size:9px;letter-spacing:2px;color:var(--text3);margin-bottom:4px;">SEBI CIRCULAR — FOCUS MODE</div>
+      <div id="slideover-title">—</div>
+      <div id="slideover-meta">—</div>
+    </div>
+    <button id="slideover-close" onclick="closeSlideover()">✕</button>
+  </div>
+  <div id="slideover-body"></div>
+</div>
+
+<!-- ── SHORTCUT OVERLAY ── -->
+<div id="shortcut-overlay" onclick="closeShortcuts()">
+  <div id="shortcut-box" onclick="event.stopPropagation()">
+    <div id="shortcut-box-header">
+      <span>Keyboard Shortcuts</span>
+      <button onclick="closeShortcuts()">✕</button>
+    </div>
+    <div class="sc-group">
+      <div class="sc-group-label">Navigation</div>
+      <div class="sc-row"><span class="sc-key">⌘ K</span><span class="sc-desc">Open command palette</span></div>
+      <div class="sc-row"><span class="sc-key">Esc</span><span class="sc-desc">Close any overlay</span></div>
+      <div class="sc-row"><span class="sc-key">?</span><span class="sc-desc">Show this help screen</span></div>
+    </div>
+    <div class="sc-group" style="border-top:1px solid var(--border)">
+      <div class="sc-group-label">Layout Presets</div>
+      <div class="sc-row"><span class="sc-key">M</span><span class="sc-desc">Macro view</span></div>
+      <div class="sc-row"><span class="sc-key">R</span><span class="sc-desc">Regulatory focus</span></div>
+      <div class="sc-row"><span class="sc-key">T</span><span class="sc-desc">Trading desk</span></div>
+    </div>
+    <div class="sc-group" style="border-top:1px solid var(--border)">
+      <div class="sc-group-label">Demo</div>
+      <div class="sc-row"><span class="sc-key">A</span><span class="sc-desc">Trigger anomaly spike</span></div>
+      <div class="sc-row"><span class="sc-key">S</span><span class="sc-desc">Export snapshot (PNG)</span></div>
+    </div>
+    <div class="sc-group" style="border-top:1px solid var(--border)">
+      <div class="sc-group-label">Panels</div>
+      <div class="sc-row"><span class="sc-key">Drag header</span><span class="sc-desc">Move panel</span></div>
+      <div class="sc-row"><span class="sc-key">Drag ◢</span><span class="sc-desc">Resize panel</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── COMMAND PALETTE ── -->
+<div id="cmd-overlay" onclick="closeCmd()">
+  <div id="cmd-box" onclick="event.stopPropagation()">
+    <div id="cmd-input-wrap">
+      <span>⌘</span>
+      <input id="cmd-input" placeholder="Search tickers, SEBI circulars, switch preset…" autocomplete="off"/>
+    </div>
+    <div id="cmd-results"></div>
+  </div>
+</div>
+
+<!-- ── STATUS BAR ── -->
+<div id="statusbar">
+  <div class="sb-item"><div class="sb-dot" style="background:var(--green)"></div> NSE</div>
+  <div class="sb-item"><div class="sb-dot" style="background:var(--amber)"></div> SEBI</div>
+  <div class="sb-item"><div class="sb-dot" style="background:var(--accent2)"></div> AI</div>
+  <div class="sb-item">LAT: <span id="latency-val" style="color:var(--green);margin-left:4px;">12ms</span></div>
+  <div class="sb-item" id="anomaly-status">● NOMINAL</div>
+  <div class="sb-sound" id="sound-toggle" onclick="toggleSound()">🔇 SOUND OFF</div>
+  <div id="presets">
+    <button class="preset-btn active" onclick="applyPreset('macro')">MACRO</button>
+    <button class="preset-btn" onclick="applyPreset('regulatory')">REGULATORY</button>
+    <button class="preset-btn" onclick="applyPreset('trading')">TRADING</button>
+  </div>
+</div>
+
+<!-- ── DEMO CONTROLS ── -->
+<div id="demo-hint" onclick="triggerDemoAnomaly()" title="Press A to trigger anomaly">⚡ DEMO ANOMALY</div>
+<div style="position:fixed;bottom:32px;right:136px;font-size:9px;color:var(--text3);letter-spacing:1px;border:1px solid var(--border);padding:3px 8px;border-radius:2px;z-index:1001;cursor:pointer;transition:color .2s,border-color .2s;" onclick="openShortcuts()" title="Press ? for shortcuts">? SHORTCUTS</div>
+
+<!-- ── JAVASCRIPT MODULES (load order matters) ── -->
+<script src="js/data.js"></script>
+<script src="js/anomaly.js"></script>
+<script src="js/panels.js"></script>
+<script src="js/signals.js"></script>
+<script src="js/workspace.js"></script>
+<script src="js/panelmanager.js"></script>
+
+</body>
+</html>
