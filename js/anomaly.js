@@ -37,7 +37,7 @@ function checkAnomalies() {
   });
 
   // ── LAYER 1: Chart reacts first — anomaly bar + chroma (immediate) ──
-  setChromaLevel(maxSev);  // always sync — handles natural decay back to 0
+  setChromaLevel(maxSev);
   const bar = document.getElementById('anomaly-bar');
   bar.className = maxSev > 0 ? `sev${maxSev}` : '';
 
@@ -59,28 +59,40 @@ function checkAnomalies() {
   // ── LAYER 3: Status bar updates ~900ms later ──
   setTimeout(() => {
     const status = document.getElementById('anomaly-status');
-    if(maxSev === 0){ status.textContent='● NOMINAL'; status.className='sb-item'; }
-    else if(maxSev === 1){ status.textContent='◉ ELEVATED'; status.className='sb-item active'; }
-    else if(maxSev === 2){ status.textContent='◉ ANOMALY DETECTED'; status.className='sb-item critical'; }
-    else { status.textContent='⬟ CRITICAL ANOMALY'; status.className='sb-item critical'; }
+    if(maxSev === 0)      { status.textContent='● NOMINAL';           status.className='sb-item'; }
+    else if(maxSev === 1) { status.textContent='◉ ELEVATED';          status.className='sb-item active'; }
+    else if(maxSev === 2) { status.textContent='◉ ANOMALY DETECTED';  status.className='sb-item critical'; }
+    else                  { status.textContent='⬟ CRITICAL ANOMALY';  status.className='sb-item critical'; }
   }, 900);
 
   // ── LAYER 4: Whisper panel fires ~1.5s later ──
   setTimeout(() => {
     if(anomalies.length > 0) {
-      anomalies.sort((a,b)=>b.z-a.z);
+      anomalies.sort((a,b) => b.z - a.z);
       const top = anomalies[0];
       if(top.sev >= 1) emitWhisper(top);
     }
+
     const wp = document.getElementById('panel-whisper');
     wp.classList.toggle('anomaly-glow', maxSev >= 2);
+
     const wb = document.getElementById('whisper-badge');
-    if(maxSev >= 2){ wb.textContent='⚠ SIGNAL'; wb.className='panel-badge badge-warn'; }
-    else { wb.textContent='ANOMALY ENGINE'; wb.className='panel-badge badge-ai'; }
-    // Sound toggle pulse on sev2+
+    if(maxSev >= 2) {
+      wb.textContent = '⚠ SIGNAL';
+      wb.className = 'panel-badge badge-warn';
+    } else {
+      wb.textContent = 'ANOMALY ENGINE';
+      wb.className = 'panel-badge badge-ai';
+    }
+
+    // Sound + pulse button — only if sound is enabled
     if(soundOn && maxSev >= 2) {
+      playAlertSound(maxSev);
       const snd = document.getElementById('sound-toggle');
-      if(snd) { snd.classList.add('pulse'); setTimeout(() => snd.classList.remove('pulse'), 2000); }
+      if(snd) {
+        snd.classList.add('pulse');
+        setTimeout(() => snd.classList.remove('pulse'), 2000);
+      }
     }
   }, 1500);
 
@@ -89,7 +101,7 @@ function checkAnomalies() {
     if(anomalies.length > 0 && anomalies[0].sev >= 2) {
       const top = anomalies[0];
       aiSignals.unshift({
-        sym: top.sym,
+        sym:  top.sym,
         type: 'anomaly-sig',
         conf: `${Math.floor(top.z * 22 + 40)}%`,
         text: `⚠ Z=${top.z.toFixed(2)} — Statistical outlier detected. Cross-referencing order flow and SEBI feed.`
@@ -101,13 +113,11 @@ function checkAnomalies() {
 }
 
 function emitDecay() {
-  // Mark the most recent whisper item as decayed — signal resolved
   const feed = document.getElementById('whisper-feed');
   if(!feed) return;
   const latest = feed.querySelector('.whisper-item');
   if(latest) latest.classList.add('decayed');
 
-  // Push a decay note
   const now = new Date();
   const ts = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
   const decayEl = document.createElement('div');
@@ -122,7 +132,6 @@ function emitDecay() {
 }
 
 function emitWhisper(a) {
-  const isExact = a.sev >= 2; // Use the exact phrase from the problem statement for sev2+
   const msgs = {
     1: [
       `${a.sym} showing elevated deviation from mean. Z=${a.z.toFixed(2)}. Monitor closely.`,
@@ -137,17 +146,18 @@ function emitWhisper(a) {
       `Something unusual is happening — EXTREME MOVE: ${a.sym} far outside normal distribution. Alert all desks immediately.`,
     ],
   };
+
   const pool = msgs[a.sev];
-  const msg = pool[Math.floor(Math.random()*pool.length)];
-  const now = new Date();
-  const ts = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+  const msg  = pool[Math.floor(Math.random() * pool.length)];
+  const now  = new Date();
+  const ts   = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
 
   // Deduplicate — don't push same sym within 3s
   const last = whisperLog[0];
-  if(last && last.sym === a.sym && (Date.now()-last.time) < 3000) return;
+  if(last && last.sym === a.sym && (Date.now() - last.time) < 3000) return;
 
-  // For sev2+, inject the ambient "Something unusual is happening" header first
-  if(isExact && (!last || last.sym !== '__ambient__' || (Date.now()-last.time) > 5000)) {
+  // For sev2+, inject the ambient "Something unusual is happening" header once every 5s
+  if(a.sev >= 2 && (!last || last.sym !== '__ambient__' || (Date.now() - last.time) > 5000)) {
     whisperLog.unshift({sym:'__ambient__', z:0, sev:a.sev, msg:'', ts, time:Date.now(), ambient:true});
   }
 
@@ -164,7 +174,7 @@ function renderWhisper() {
       return `<div class="whisper-ambient">"Something unusual is happening."</div>`;
     }
     return `
-    <div class="whisper-item sev${w.sev}${w.decayed?' decayed':''}">
+    <div class="whisper-item sev${w.sev}${w.decayed ? ' decayed' : ''}">
       <div class="w-header">
         <span class="w-sym">${w.sym}</span>
         <span class="w-score sev${w.sev}">Z=${w.z.toFixed(2)}</span>
@@ -184,7 +194,7 @@ function setChromaLevel(level) {
   if(level === chromaLevel) return;
   chromaLevel = level;
   document.body.classList.remove('chroma-low','chroma-med','chroma-high');
-  if(level === 1) document.body.classList.add('chroma-low');
+  if(level === 1)      document.body.classList.add('chroma-low');
   else if(level === 2) document.body.classList.add('chroma-med');
   else if(level === 3) document.body.classList.add('chroma-high');
 }

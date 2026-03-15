@@ -57,7 +57,56 @@ function drawStreamSparkline(i) {
 //  SOUND TOGGLE (Visual Only)
 // ═══════════════════════════════════════════════════
 
+let audioCtx = null;
 let soundOn = false;
+
+function getAudioCtx() {
+  if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if(audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+function playAlertSound(severity) {
+  if(!soundOn) return;
+  try {
+    const ctx = getAudioCtx();
+    const beepCount = severity >= 3 ? 3 : severity >= 2 ? 2 : 1;
+    const freq      = severity >= 3 ? 880 : severity >= 2 ? 660 : 440;
+    const vol       = severity >= 3 ? 0.18 : 0.10;
+    for(let b = 0; b < beepCount; b++) {
+      const startTime = ctx.currentTime + b * 0.18;
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, startTime);
+      osc.frequency.exponentialRampToValueAtTime(freq * 0.85, startTime + 0.12);
+      gain.gain.setValueAtTime(0, startTime);
+      gain.gain.linearRampToValueAtTime(vol, startTime + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.13);
+      osc.start(startTime);
+      osc.stop(startTime + 0.14);
+    }
+  } catch(e) { console.warn('Aether audio error:', e.message); }
+}
+
+function playAlertTick() {
+  if(!soundOn) return;
+  try {
+    const ctx = getAudioCtx();
+    const osc  = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(1200, ctx.currentTime);
+    gain.gain.setValueAtTime(0.08, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.09);
+  } catch(e) {}
+}
 
 function toggleSound() {
   soundOn = !soundOn;
@@ -66,6 +115,7 @@ function toggleSound() {
   if(soundOn) {
     el.textContent = '🔊 SOUND ON';
     el.classList.add('on');
+    playAlertSound(1);
   } else {
     el.textContent = '🔇 SOUND OFF';
     el.classList.remove('on');
