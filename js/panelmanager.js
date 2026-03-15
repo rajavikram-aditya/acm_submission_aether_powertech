@@ -143,10 +143,50 @@ function refreshPanelsMenu() {
 loadPanelState();
 // Build menu initially (hidden but ready)
 refreshPanelsMenu();
+// ── BOOT SEQUENCE ──
+const BOOT_STEPS = [
+  { pct:  8, msg: 'CONNECTING TO NSE FEED...' },
+  { pct: 20, msg: 'LOADING MARKET DATA...' },
+  { pct: 35, msg: 'CALIBRATING SIGNAL STREAM...' },
+  { pct: 50, msg: 'INITIALISING CHART ENGINE...' },
+  { pct: 65, msg: 'LOADING SEBI REGULATORY FEED...' },
+  { pct: 78, msg: 'WARMING UP ANOMALY ENGINE...' },
+  { pct: 88, msg: 'BUILDING CORRELATION MATRIX...' },
+  { pct: 96, msg: 'RESTORING WORKSPACE LAYOUT...' },
+  { pct:100, msg: 'AETHER ONLINE.' },
+];
 
-setTimeout(()=>{
-  // Initialise ghost prediction data before first draw
-  const slice=chartData.slice(-15),trend=(slice[slice.length-1]-slice[0])/15;
-  for(let g=1;g<=20;g++) ghostData.push(chartData[chartData.length-1]+trend*g+(Math.random()-.5)*7);
-  drawChart(null);buildSparklines();renderWhisper();initChartCrosshair();buildCorrelation();
-},120);
+function runBootSequence() {
+  const bar    = document.getElementById('loader-bar');
+  const status = document.getElementById('loader-status');
+  const loader = document.getElementById('loader');
+  let step = 0;
+
+  function nextStep() {
+    if(step >= BOOT_STEPS.length) {
+      const slice = chartData.slice(-15);
+      const trend = (slice[slice.length-1] - slice[0]) / 15;
+      for(let g=1;g<=20;g++) ghostData.push(chartData[chartData.length-1]+trend*g+(Math.random()-.5)*7);
+      drawChart(null);
+      buildSparklines();
+      renderWhisper();
+      initChartCrosshair();
+      buildCorrelation();
+      setTimeout(() => {
+        loader.classList.add('fade-out');
+        setTimeout(() => loader.style.display = 'none', 650);
+      }, 500);
+      return;
+    }
+    const s = BOOT_STEPS[step];
+    bar.style.width    = s.pct + '%';
+    status.textContent = s.msg;
+    step++;
+    const delay = step === BOOT_STEPS.length ? 400 : 180 + Math.random() * 160;
+    setTimeout(nextStep, delay);
+  }
+
+  setTimeout(nextStep, 300);
+}
+
+runBootSequence();
